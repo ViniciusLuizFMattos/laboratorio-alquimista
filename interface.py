@@ -49,7 +49,7 @@ class Jogo(tk.Tk):
         self.t0 = time.time()
         barra = tk.Frame(self, bg=BG)
         barra.pack(fill="x", padx=20, pady=(8, 0))
-        self.btn_musica = tk.Button(barra, text="♪ Música: ligada", command=self.alternar_musica,
+        self.btn_musica = tk.Button(barra, text="♪ Música: desligada", command=self.alternar_musica,
                                     font=self.f_mono, bg=PAINEL, fg=CINZA, relief="flat",
                                     activebackground=PAINEL, activeforeground=OURO, bd=0,
                                     padx=10, pady=3, cursor="hand2")

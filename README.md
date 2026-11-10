@@ -16,7 +16,7 @@ Versão só de terminal:
 python jogo.py
 ```
 
-Cada sala tem 300 s de "ar". Erro custa 20 s e a dica custa 30 s. A música pode ser ligada/desligada pelo botão no topo ou com a tecla `M`.
+Cada sala tem 300 s de "ar". Erro custa 20 s e a dica custa 30 s. A música começa desligada; use o botão no topo ou a tecla `M` para ligar.
 
 ## Versão online
 

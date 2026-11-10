@@ -29,7 +29,7 @@ FAIXAS = {
 }
 
 _atual = None
-_mudo = False
+_mudo = True  # o jogo sempre começa com a música desligada
 _trava = threading.Lock()
 
 
