@@ -1,5 +1,6 @@
 """Interface gráfica (tkinter) de "O Laboratório Abandonado do Alquimista"."""
 
+import random
 import time
 import tkinter as tk
 from tkinter import font as tkfont
@@ -38,6 +39,7 @@ class Jogo(tk.Tk):
         self.f_botao = tkfont.Font(family="Georgia", size=11, weight="bold")
 
         self.indice = 0
+        self.q = None
         self.fim = 0.0
         self.erros = 0
         self.dica_usada = False
@@ -120,6 +122,7 @@ class Jogo(tk.Tk):
     def iniciar_sala(self):
         self.limpar()
         nivel = NIVEIS[self.indice]
+        self.q = random.choice([q for q in nivel["questoes"] if q is not self.q])
         self.erros = 0
         self.dica_usada = False
         self.fim = time.time() + TEMPO_POR_SALA
@@ -147,7 +150,7 @@ class Jogo(tk.Tk):
         caixa = tk.Frame(self.container, bg=PAINEL, padx=14, pady=10)
         caixa.pack(fill="x", pady=8)
         tk.Label(caixa, text="ENIGMA", font=self.f_botao, fg=AMARELO, bg=PAINEL).pack(anchor="w")
-        tk.Label(caixa, text=nivel["pergunta"], font=self.f_enigma, fg=TEXTO, bg=PAINEL,
+        tk.Label(caixa, text=self.q["pergunta"], font=self.f_enigma, fg=TEXTO, bg=PAINEL,
                  wraplength=800, justify="left").pack(anchor="w", pady=(4, 0))
 
         linha = tk.Frame(self.container, bg=BG)
@@ -197,7 +200,7 @@ class Jogo(tk.Tk):
             self.fim -= PENALIDADE_DICA
             self.dica_usada = True
             self.btn_dica.config(text="Dica usada")
-        self.mensagem("DICA: " + NIVEIS[self.indice]["dica"], AMARELO)
+        self.mensagem("DICA: " + self.q["dica"], AMARELO)
 
     def mensagem(self, texto, cor):
         self.lbl_msg.config(text=texto, fg=cor)
@@ -215,12 +218,12 @@ class Jogo(tk.Tk):
         if valor is None:
             self.mensagem("Digite apenas um número inteiro.", CINZA)
             return
-        if valor == nivel["resposta_correta"]:
+        if valor == self.q["resposta_correta"]:
             self.sala_ativa = False
             audio.sucesso()
             cenarios.animar(self.cena, self.nivel_cena, time.time() - self.t0, 0, aberta=True)
             self.mensagem(nivel["mensagem_sucesso"], VERDE)
-            self.mostrar_gabarito(nivel, sucesso=True)
+            self.mostrar_gabarito(self.q, sucesso=True)
         else:
             audio.erro()
             self.erros += 1
@@ -237,17 +240,17 @@ class Jogo(tk.Tk):
         self.lbl_gas.config(text="Gás alquímico: 100%   |   ar restante: 0s")
         self.mensagem("O gás toma o ambiente e tudo escurece... Estude o gabarito e tente de novo.",
                       VERMELHO)
-        self.mostrar_gabarito(nivel, sucesso=False)
+        self.mostrar_gabarito(self.q, sucesso=False)
 
-    def mostrar_gabarito(self, nivel, sucesso):
+    def mostrar_gabarito(self, q, sucesso):
         self.entrada.config(state="disabled")
         self.btn_responder.config(state="disabled")
         self.btn_dica.config(state="disabled")
 
         txt = tk.Text(self.area_final, height=7, font=self.f_mono, bg=PAINEL, fg=TEXTO,
                       relief="flat", wrap="word", padx=10, pady=8)
-        txt.insert("end", f"GABARITO — resposta: {nivel['resposta_correta']}\n")
-        txt.insert("end", f"Fórmula: {nivel['formula']}\n\n{nivel['gabarito']}")
+        txt.insert("end", f"GABARITO — resposta: {q['resposta_correta']}\n")
+        txt.insert("end", f"Fórmula: {q['formula']}\n\n{q['gabarito']}")
         txt.config(state="disabled")
         txt.pack(fill="both", expand=True, pady=(4, 8))
 

@@ -11,7 +11,9 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 def main():
     with open(os.path.join(AQUI, "web", "template.html"), encoding="utf-8") as f:
         html = f.read()
-    dados = "const NIVEIS = " + json.dumps(NIVEIS, ensure_ascii=False, indent=1) + ";"
+    publico = [{**n, "questoes": [{k: v for k, v in q.items() if k != "meta"} for q in n["questoes"]]}
+               for n in NIVEIS]
+    dados = "const NIVEIS = " + json.dumps(publico, ensure_ascii=False, separators=(",", ":")) + ";"
     html = html.replace("/*DADOS*/", dados)
     saida = os.path.join(AQUI, "docs")
     os.makedirs(saida, exist_ok=True)

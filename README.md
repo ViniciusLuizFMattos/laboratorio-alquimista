@@ -18,7 +18,20 @@ python jogo.py
 
 Cada sala tem 300 s de "ar". Erro custa 20 s e a dica custa 30 s. A música pode ser ligada/desligada pelo botão no topo ou com a tecla `M`.
 
+## Versão online
+
+Jogue no navegador: https://viniciusluizfmattos.github.io/laboratorio-alquimista/
+
+A página é gerada com `python build_web.py` (a partir de `web/template.html` e `dados.py`) e fica em `docs/index.html`.
+
+## Enigmas
+
+Cada sala tem 22 enigmas diferentes e um deles é sorteado a cada partida (na versão web, o jogo dá preferência aos que ainda não apareceram). Respostas e gabaritos são calculados por fórmula em `questoes.py`, e `test_niveis.py` confere todos por força bruta.
+
 ## Estrutura
+
+- `questoes.py`: bancos de enigmas de cada sala
+- `build_web.py` e `web/`: geração da versão web
 
 - `interface.py`: janela do jogo (tkinter)
 - `cenarios.py`: cenário animado de cada sala, desenhado em código

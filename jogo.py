@@ -1,6 +1,7 @@
 """O Laboratório Abandonado do Alquimista: escape room de Análise Combinatória."""
 
 import os
+import random
 import sys
 import time
 
@@ -59,23 +60,29 @@ def ler_numero(texto):
     return int(limpo) if limpo.lstrip("-").isdigit() else None
 
 
-def mostrar_gabarito(nivel):
+def mostrar_gabarito(q):
     print()
     print(cor("Gabarito", "ciano"))
-    print(f"Resposta: {cor(str(nivel['resposta_correta']), 'verde')}")
-    print(f"Fórmula:  {nivel['formula']}")
-    print(nivel["gabarito"])
+    print(f"Resposta: {cor(str(q['resposta_correta']), 'verde')}")
+    print(f"Fórmula:  {q['formula']}")
+    print(q["gabarito"])
     print()
 
 
-def jogar_sala(nivel):
+def sortear(nivel, anterior=None):
+    """Sorteia um enigma da sala, evitando repetir o da tentativa anterior."""
+    opcoes = [q for q in nivel["questoes"] if q is not anterior]
+    return random.choice(opcoes)
+
+
+def jogar_sala(nivel, q):
     linha(f"NÍVEL {nivel['nivel']} - {nivel['titulo'].upper()}")
     print(cor(f"Tópico: {nivel['tema']}", "cinza"))
     print()
     digitar(nivel["narrativa"])
     print()
     print(cor("ENIGMA", "amarelo"))
-    print(nivel["pergunta"])
+    print(q["pergunta"])
     print()
     print(cor("Comandos: número = responder | d = dica | s = sair", "cinza"))
 
@@ -87,7 +94,7 @@ def jogar_sala(nivel):
         restante = fim - time.time()
         if restante <= 0:
             print(cor("\nO gás toma o ambiente. Tudo escurece...", "vermelho"))
-            mostrar_gabarito(nivel)
+            mostrar_gabarito(q)
             return False
         print(barra_gas(restante))
         entrada = input("> ").strip().lower()
@@ -99,7 +106,7 @@ def jogar_sala(nivel):
                 fim -= PENALIDADE_DICA
                 dica_usada = True
                 print(cor(f"(a dica custa {PENALIDADE_DICA}s de ar)", "cinza"))
-            print(cor("DICA: ", "amarelo") + nivel["dica"])
+            print(cor("DICA: ", "amarelo") + q["dica"])
             continue
 
         valor = ler_numero(entrada)
@@ -107,10 +114,10 @@ def jogar_sala(nivel):
             print(cor("Digite apenas um número inteiro, 'd' ou 's'.", "cinza"))
             continue
 
-        if valor == nivel["resposta_correta"]:
+        if valor == q["resposta_correta"]:
             print()
             digitar(cor(nivel["mensagem_sucesso"], "verde"))
-            mostrar_gabarito(nivel)
+            mostrar_gabarito(q)
             input(cor("[Enter para continuar]", "cinza"))
             return True
 
@@ -140,8 +147,10 @@ def main():
     preparar_terminal()
     abertura()
     for nivel in NIVEIS:
+        q = None
         while True:
-            resultado = jogar_sala(nivel)
+            q = sortear(nivel, q)
+            resultado = jogar_sala(nivel, q)
             if resultado is True:
                 break
             if resultado is None:

@@ -400,24 +400,41 @@ $('regras').textContent = `Cada sala tem ${TEMPO}s de ar  •  Erro: -${PEN_ERRO
 function mostrar(tela) { ['menu', 'sala', 'fim'].forEach(t => $('tela-' + t).hidden = t !== tela); }
 function msg(txt, cor) { $('msg').textContent = txt; $('msg').style.color = cor; }
 
+const ultima = {};
+/* Sorteia um enigma da sala, dando preferência aos que este navegador ainda não mostrou. */
+function sortear(i) {
+  const n = NIVEIS[i], chave = 'vistas_' + n.nivel;
+  let vistas = [];
+  try { vistas = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) {}
+  const todos = n.questoes.map((_, k) => k);
+  let livres = todos.filter(k => !vistas.includes(k) && k !== ultima[i]);
+  if (!livres.length) { vistas = []; livres = todos.filter(k => k !== ultima[i]); }
+  const k = livres[Math.floor(Math.random() * livres.length)];
+  vistas.push(k); ultima[i] = k;
+  try { localStorage.setItem(chave, JSON.stringify(vistas)); } catch (e) {}
+  return n.questoes[k];
+}
+let q = null;
+
 function iniciarSala() {
   const n = NIVEIS[idx];
+  q = sortear(idx);
   erros = 0; dicaUsada = false; ativa = true; aberta = false; cenaNivel = n.nivel; fracAtual = 0;
   fim = agora() + TEMPO;
   mostrar('sala'); tocar(n.nivel);
   $('sala-num').textContent = `SALA ${n.nivel} DE ${NIVEIS.length}  •  ${n.tema}`;
   $('sala-titulo').textContent = n.titulo;
   $('sala-narrativa').textContent = n.narrativa;
-  $('sala-pergunta').textContent = n.pergunta;
+  $('sala-pergunta').textContent = q.pergunta;
   $('btn-dica').textContent = `Dica (-${PEN_DICA}s)`;
   ['resposta', 'btn-responder', 'btn-dica'].forEach(i => $(i).disabled = false);
   $('resposta').value = ''; msg('', '');
   $('area-final').hidden = true;
   if (matchMedia('(pointer:fine)').matches) $('resposta').focus();
 }
-function gabarito(n, sucesso) {
+function gabarito(sucesso) {
   ['resposta', 'btn-responder', 'btn-dica'].forEach(i => $(i).disabled = true);
-  $('gabarito').textContent = `GABARITO - resposta: ${n.resposta_correta}\nFórmula: ${n.formula}\n\n${n.gabarito}`;
+  $('gabarito').textContent = `GABARITO - resposta: ${q.resposta_correta}\nFórmula: ${q.formula}\n\n${q.gabarito}`;
   const b = $('btn-proxima');
   if (sucesso) { b.textContent = idx === NIVEIS.length - 1 ? 'Ver desfecho' : 'Próxima sala'; b.className = 'btn verde'; b.onclick = avancar; }
   else { b.textContent = 'Tentar a sala novamente'; b.className = 'btn verm'; b.onclick = iniciarSala; }
@@ -431,8 +448,8 @@ function responder() {
   if (!ativa) return;
   const n = NIVEIS[idx], txt = $('resposta').value.trim().replace(/[. ]/g, '');
   if (!/^-?\d+$/.test(txt)) { msg('Digite apenas um número inteiro.', 'var(--cinza)'); return; }
-  if (parseInt(txt, 10) === n.resposta_correta) {
-    ativa = false; aberta = true; sfxSucesso(); msg(n.mensagem_sucesso, 'var(--verde)'); gabarito(n, true);
+  if (parseInt(txt, 10) === q.resposta_correta) {
+    ativa = false; aberta = true; sfxSucesso(); msg(n.mensagem_sucesso, 'var(--verde)'); gabarito(true);
   } else {
     erros++; fim -= PEN_ERRO; sfxErro();
     msg(`${n.mensagem_erro}\n(Erros: ${erros}  •  -${PEN_ERRO}s de ar)`, 'var(--vermelho)');
@@ -442,7 +459,7 @@ function responder() {
 function dica() {
   if (!ativa) return;
   if (!dicaUsada) { fim -= PEN_DICA; dicaUsada = true; $('btn-dica').textContent = 'Dica usada'; }
-  msg('DICA: ' + NIVEIS[idx].dica, 'var(--amarelo)');
+  msg('DICA: ' + q.dica, 'var(--amarelo)');
 }
 function quadro() {
   const t = agora();
@@ -455,7 +472,7 @@ function quadro() {
     if (resto <= 0) {
       ativa = false; fracAtual = 1;
       msg('O gás toma o ambiente e tudo escurece... Estude o gabarito e tente de novo.', 'var(--vermelho)');
-      gabarito(NIVEIS[idx], false);
+      gabarito(false);
     }
   }
   desenharCena(g, cenaNivel, t, fracAtual, aberta);
