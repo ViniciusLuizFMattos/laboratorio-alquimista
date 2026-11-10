@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O Laboratório Abandonado do Alquimista</title>
+<style>
+  :root { --bg:#14110f; --painel:#201a16; --ouro:#d4a64a; --texto:#e8dcc4; --cinza:#8a7f6e;
+          --verde:#6fbf73; --amarelo:#e0b341; --vermelho:#d9534f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--texto); font-family:Georgia,"Times New Roman",serif;
+         line-height:1.45; }
+  main { max-width:880px; margin:0 auto; padding:10px 16px 40px; }
+  .topo { display:flex; justify-content:flex-end; }
+  button { font-family:inherit; cursor:pointer; border:0; }
+  #btn-musica { background:var(--painel); color:var(--cinza); padding:6px 12px; font-family:Consolas,monospace; font-size:13px; }
+  #btn-musica:hover { color:var(--ouro); }
+  canvas { display:block; width:100%; max-width:860px; margin:6px auto; border:2px solid var(--ouro); background:#000; }
+  h1 { font-size:clamp(22px,4vw,30px); color:var(--ouro); margin:4px 0; }
+  .sub { color:var(--cinza); font-style:italic; }
+  .centro { text-align:center; }
+  .btn { background:var(--ouro); color:var(--bg); font-weight:bold; font-size:16px; padding:10px 22px; }
+  .btn:hover { background:var(--texto); }
+  .btn.cinza { background:var(--cinza); } .btn.verde { background:var(--verde); } .btn.verm { background:var(--vermelho); }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .gas { height:22px; background:var(--painel); border:1px solid var(--cinza); margin-top:8px; }
+  #gas-barra { height:100%; width:0; background:var(--verde); }
+  #gas-txt { font-family:Consolas,monospace; font-size:13px; color:var(--cinza); margin:2px 0 8px; }
+  .enigma { background:var(--painel); padding:12px 16px; margin:10px 0; }
+  .enigma b { color:var(--amarelo); font-size:13px; letter-spacing:1px; }
+  .enigma p { margin:4px 0 0; font-weight:bold; font-size:17px; white-space:pre-line; }
+  .linha { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+  input { width:130px; font:bold 20px Georgia,serif; text-align:center; background:var(--painel); color:var(--texto);
+          border:1px solid var(--cinza); padding:8px; }
+  input:focus { outline:2px solid var(--ouro); }
+  #msg { min-height:48px; white-space:pre-line; }
+  #gabarito { background:var(--painel); padding:10px 14px; font-family:Consolas,monospace; font-size:14px;
+              white-space:pre-wrap; margin:8px 0; }
+  .dir { text-align:right; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topo"><button id="btn-musica">♪ Música: ligada</button></div>
+  <canvas id="cena" width="860" height="200"></canvas>
+
+  <section id="tela-menu" class="centro">
+    <h1>O LABORATÓRIO<br>ABANDONADO DO ALQUIMISTA</h1>
+    <p>Você acorda no chão frio de um laboratório subterrâneo. A porta está selada e um gás esverdeado sobe
+       pelas rachaduras. As paredes trazem a assinatura do lendário Paracelso. Resolva os enigmas de Análise
+       Combinatória de cada sala antes que o ar acabe.</p>
+    <p class="sub" id="regras"></p>
+    <button class="btn" id="btn-iniciar">Entrar no laboratório</button>
+  </section>
+
+  <section id="tela-sala" hidden>
+    <div class="sub" id="sala-num"></div>
+    <h1 id="sala-titulo"></h1>
+    <div class="gas"><div id="gas-barra"></div></div>
+    <div id="gas-txt"></div>
+    <p class="sub" id="sala-narrativa"></p>
+    <div class="enigma"><b>ENIGMA</b><p id="sala-pergunta"></p></div>
+    <div class="linha">
+      <input id="resposta" inputmode="numeric" autocomplete="off" aria-label="Sua resposta">
+      <button class="btn" id="btn-responder">Responder</button>
+      <button class="btn cinza" id="btn-dica"></button>
+    </div>
+    <div id="msg"></div>
+    <div id="area-final" hidden>
+      <div id="gabarito"></div>
+      <div class="dir"><button class="btn verde" id="btn-proxima"></button></div>
+    </div>
+  </section>
+
+  <section id="tela-fim" class="centro" hidden>
+    <h1 style="color:var(--verde)">VOCÊ ESCAPOU!</h1>
+    <p>O teto se abre sobre o céu estrelado. Você dominou o Princípio Fundamental da Contagem, permutações,
+       arranjos, combinações e a mesa circular. O laboratório de Paracelso fica para trás.</p>
+    <button class="btn" id="btn-reiniciar">Jogar novamente</button>
+  </section>
+</main>
+
+<script>
+/*DADOS*/
+const TEMPO = 300, PEN_ERRO = 20, PEN_DICA = 30;
+
+/* ===================== ÁUDIO ===================== */
+const FAIXAS = {
+  menu: [[55, 82.5, 110, 130.5], [440, 523.25, 659.25]],
+  1: [[49, 73.5, 98, 116.5], [392, 466.16, 587.33]],
+  2: [[55, 82.5, 110, 131], [440, 523.25, 622.25]],
+  3: [[58.25, 87.25, 116.5, 138.5], [466.16, 554.37, 698.46]],
+  4: [[51.75, 77.5, 103.75, 123], [415.3, 493.88, 622.25]],
+  5: [[46.25, 69.25, 92.5, 110], [370, 440, 554.37, 740]],
+  fim: [[65.5, 98, 131, 196], [523.25, 659.25, 783.99, 1046.5]],
+};
+let ac = null, master = null, faixa = null, sinoTimer = null, mudo = false, atual = null;
+
+function iniciarAudio() {
+  try {
+    if (!ac) {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = 0.6; master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+}
+function pararFaixa() {
+  clearTimeout(sinoTimer);
+  if (!faixa) return;
+  const f = faixa; faixa = null;
+  f.g.gain.cancelScheduledValues(ac.currentTime);
+  f.g.gain.setTargetAtTime(0, ac.currentTime, 0.4);
+  setTimeout(() => f.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), 2500);
+}
+function sino(f) {
+  const t = ac.currentTime, g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 4);
+  g.connect(master);
+  [[f, 1], [f * 2.76, 0.4]].forEach(([fr, a]) => {
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.frequency.value = fr; og.gain.value = a; o.connect(og); og.connect(g);
+    o.start(t); o.stop(t + 4.2);
+  });
+}
+function tocar(chave) {
+  atual = chave;
+  if (!ac || mudo) return;
+  pararFaixa();
+  const [drone, escala] = FAIXAS[chave];
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, ac.currentTime);
+  g.gain.linearRampToValueAtTime(0.22, ac.currentTime + 3);
+  g.connect(master);
+  const nodes = [];
+  const lfo = ac.createOscillator(), lg = ac.createGain();
+  lfo.frequency.value = 1 / 12; lg.gain.value = 0.07; lfo.connect(lg); lg.connect(g.gain); lfo.start();
+  nodes.push(lfo);
+  drone.forEach((f, k) => {
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.type = k % 2 ? 'triangle' : 'sine'; o.frequency.value = f;
+    og.gain.value = 0.5 / (k + 1) + 0.1; o.connect(og); og.connect(g); o.start(); nodes.push(o);
+  });
+  faixa = { g, nodes };
+  (function proximo() {
+    sinoTimer = setTimeout(() => {
+      if (faixa) sino(escala[Math.floor(Math.random() * escala.length)]);
+      proximo();
+    }, 3500 + Math.random() * 4500);
+  })();
+}
+function bipes(seq) {
+  if (!ac || mudo) return;
+  let t = ac.currentTime;
+  seq.forEach(([f, d]) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + d + 0.02); t += d;
+  });
+}
+const sfxSucesso = () => bipes([[523, .1], [659, .1], [784, .1], [1047, .3]]);
+const sfxErro = () => bipes([[196, .2], [147, .4]]);
+function alternarMusica() {
+  iniciarAudio();
+  mudo = !mudo;
+  document.getElementById('btn-musica').textContent = mudo ? '♪ Música: desligada' : '♪ Música: ligada';
+  if (mudo) pararFaixa(); else tocar(atual || 'menu');
+}
+
+/* ===================== CENÁRIOS ===================== */
+const W = 860, H = 200, OURO = '#d4a64a';
+const TOCHAS = [[45, 95], [815, 95]];
+function rng(seed) {
+  let a = seed;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const ri = (r, a, b) => a + Math.floor(r() * (b - a + 1));
+function adj(hex, d) {
+  const v = [1, 3, 5].map(i => Math.max(0, Math.min(255, parseInt(hex.substr(i, 2), 16) + d)));
+  return '#' + v.map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function R(g, x0, y0, x1, y1, fill, stroke, lw = 1) {
+  if (fill) { g.fillStyle = fill; g.fillRect(x0, y0, x1 - x0, y1 - y0); }
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.strokeRect(x0, y0, x1 - x0, y1 - y0); }
+}
+function O(g, x0, y0, x1, y1, fill, stroke, lw = 1) {
+  g.beginPath(); g.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, 7);
+  if (fill) { g.fillStyle = fill; g.fill(); }
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+}
+function P(g, pts, fill, stroke, lw = 1) {
+  g.beginPath(); g.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+  g.closePath();
+  if (fill) { g.fillStyle = fill; g.fill(); }
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+}
+function L(g, x0, y0, x1, y1, stroke, lw = 1) {
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.strokeStyle = stroke; g.lineWidth = lw; g.stroke();
+}
+function T(g, x, y, txt, fill, font) {
+  g.fillStyle = fill; g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, x, y);
+}
+function tijolos(g, base, junta, seed) {
+  const r = rng(seed);
+  R(g, 0, 0, W, H, junta);
+  for (let fila = 0, y = 0; y < H; fila++, y += 20) {
+    const d = fila % 2 ? 30 : 0;
+    for (let x = -d; x < W; x += 60) R(g, x + 1, y + 1, x + 59, y + 19, adj(base, ri(r, -9, 9)));
+  }
+}
+function piso(g, cor = '#1d1612') { R(g, 0, H - 25, W, H, cor); L(g, 0, H - 25, W, H - 25, '#000'); }
+function suportes(g) {
+  TOCHAS.forEach(([x, y]) => {
+    R(g, x - 3, y, x + 3, y + 42, '#3b2a1c');
+    P(g, [x - 9, y, x + 9, y, x + 5, y + 10, x - 5, y + 10], '#5a4a3a');
+  });
+}
+function chamas(g, t, r) {
+  TOCHAS.forEach(([x, y]) => {
+    const rr = 42 + 6 * Math.sin(t * 7 + x) + (r() * 6 - 3);
+    g.globalAlpha = 0.14; O(g, x - rr, y - rr, x + rr, y + rr, '#ff9a2e'); g.globalAlpha = 1;
+    const h = 24 + (r() * 11 - 4);
+    P(g, [x - 7, y, x, y - h, x + 7, y, x + 3, y + 4, x - 3, y + 4], '#ffb347', '#ff6a00');
+    P(g, [x - 3, y, x, y - h * 0.55, x + 3, y], '#fff3b0');
+  });
+}
+function nevoa(g, t, frac) {
+  if (frac <= 0.02) return;
+  const topo = H * (1 - frac * 0.85), pts = [0, H];
+  for (let x = 0; x <= W; x += 30) pts.push(x, topo + 9 * Math.sin(x / 60 + t * 1.5));
+  pts.push(W, H);
+  g.globalAlpha = 0.38; P(g, pts, '#58c45a');
+  g.globalAlpha = 0.14;
+  for (let k = 0; k < 5; k++) {
+    const bx = (k * 190 + t * 22 * (1 + k % 2)) % (W + 120) - 60, by = topo + 14 + 10 * Math.sin(t + k);
+    O(g, bx - 70, by - 18, bx + 70, by + 18, '#8be08c');
+  }
+  g.globalAlpha = 1;
+}
+
+/* --- sala 1 --- */
+function armario(g, x, rot) {
+  R(g, x, 55, x + 100, H - 25, '#5b3d26', '#2b1a0e', 2);
+  R(g, x + 8, 68, x + 92, H - 38, null, '#3a2414');
+  O(g, x + 44, 118, x + 56, 130, OURO, '#7a5a1a');
+  T(g, x + 50, 82, rot, OURO, 'bold 12px Georgia');
+}
+function cena1(g) {
+  tijolos(g, '#4a3d34', '#2a211b', 1); piso(g);
+  g.beginPath(); g.moveTo(380, 34); g.arc(430, 34, 50, Math.PI, 0); g.lineTo(480, 34); g.closePath();
+  g.fillStyle = '#2e2e33'; g.fill(); g.strokeStyle = '#15151a'; g.lineWidth = 3; g.stroke();
+  R(g, 380, 34, 480, H - 25, '#2e2e33', '#15151a', 3);
+  [405, 430, 455].forEach(x => L(g, x, 14, x, H - 25, '#1a1a1f', 3));
+  [70, 120, 160].forEach(y => [392, 418, 442, 468].forEach(x => O(g, x - 2, y - 2, x + 2, y + 2, '#6b6b73')));
+  O(g, 420, 110, 440, 130, OURO, '#7a5a1a', 2);
+  armario(g, 100, 'MANTOS'); armario(g, 235, 'TOMOS'); armario(g, 620, 'FRASCOS');
+  suportes(g);
+}
+/* --- sala 2 --- */
+const LETRAS = 'ARCANA', STONE_X = [335, 375, 415, 455, 495, 535];
+function estante(g, x0, x1, r) {
+  const cores = ['#7a2e2e', '#2e4a7a', '#3f6b3a', '#6b4a8a', '#8a6a2e', '#2e6b6b', '#5a3a22'];
+  [70, 115, 160].forEach(y => {
+    let x = x0;
+    while (x < x1 - 14) {
+      const w = ri(r, 8, 14), h = ri(r, 26, 40);
+      R(g, x, y - h, x + w, y, cores[ri(r, 0, 6)], '#1a120c'); x += w + 1;
+    }
+    R(g, x0 - 4, y, x1 + 4, y + 5, '#4a3220', '#2a1a10');
+  });
+  R(g, x0 - 8, 25, x0 - 4, 175, '#4a3220'); R(g, x1 + 4, 25, x1 + 8, 175, '#4a3220');
+}
+function cena2(g) {
+  const r = rng(2);
+  tijolos(g, '#3a3340', '#201b25', 2); piso(g, '#15111a');
+  estante(g, 100, 300, r); estante(g, 560, 760, r);
+  R(g, 390, 150, 470, H - 25, '#5d5566', '#2d2833'); R(g, 380, 140, 480, 152, '#7a7184', '#2d2833');
+  STONE_X.forEach((x, i) => {
+    R(g, x - 14, 98, x + 14, 134, '#3b3548', '#9d92b5', 2);
+    T(g, x, 116, LETRAS[i], '#f1e6c8', 'bold 20px Georgia');
+  });
+  for (let k = 0; k < 6; k++) { L(g, 0, 0, 70 - k * 8, k * 12, '#6e6678'); L(g, W, 0, W - 70 + k * 8, k * 12, '#6e6678'); }
+  suportes(g);
+}
+function anim2(g, t) {
+  STONE_X.forEach((x, i) => {
+    const p = 0.5 + 0.5 * Math.sin(t * 3 + i);
+    R(g, x - 17, 95, x + 17, 137, null, `rgb(${120 + 100 * p | 0},${90 + 70 * p | 0},${170 + 60 * p | 0})`, 2);
+  });
+}
+/* --- sala 3 --- */
+const FRASCOS = ['#d9534f', '#e0b341', '#4f9de0', '#6fbf73', '#b565d9', '#e07f4f', '#4fd9c9'];
+const FRASCO_X = [0, 1, 2, 3, 4, 5, 6].map(i => 190 + i * 80);
+function cena3(g) {
+  tijolos(g, '#3c3a46', '#1e1d25', 3); piso(g, '#17151d');
+  [370, 430, 490].forEach((x, i) => {
+    O(g, x - 24, 30, x + 24, 78, '#15131a', OURO, 3); T(g, x, 54, String(i + 1), OURO, 'bold 24px Georgia');
+  });
+  R(g, 150, 135, 710, H - 25, '#cfc9bd', '#8f897d', 2); R(g, 125, 118, 735, 138, '#e6e0d3', '#8f897d', 2);
+  for (let k = 0; k < 5; k++) L(g, 160 + k * 110, 142, 175 + k * 110, H - 28, '#aaa497');
+  FRASCOS.forEach((cor, i) => {
+    const x = FRASCO_X[i];
+    R(g, x - 5, 66, x + 5, 86, '#cfd8dc', '#7a8588'); R(g, x - 6, 62, x + 6, 68, '#8b5a2b');
+    O(g, x - 18, 84, x + 18, 118, cor, '#f3f3f3');
+    g.globalAlpha = 0.5; O(g, x - 11, 90, x - 5, 98, '#fff'); g.globalAlpha = 1;
+  });
+  suportes(g);
+}
+function anim3(g, t) {
+  FRASCOS.forEach((cor, i) => {
+    for (let k = 0; k < 2; k++) {
+      const fase = (t * 18 + i * 13 + k * 25) % 50, y = 62 - fase, r = 3 - fase / 25;
+      if (r > 0.5) { const dx = 4 * Math.sin(t + i + k); O(g, FRASCO_X[i] - r + dx, y - r, FRASCO_X[i] + r + dx, y + r, cor); }
+    }
+  });
+}
+/* --- sala 4 --- */
+const VASOS_X = [95, 165, 235, 305, 555, 625, 695, 765];
+function planta(g, x, r) {
+  P(g, [x - 14, H - 25, x + 14, H - 25, x + 11, H - 48, x - 11, H - 48], '#8b4a2b', '#4a2a18');
+  const alt = ri(r, 55, 95);
+  L(g, x, H - 48, x + ri(r, -8, 8), H - 48 - alt, '#2f7a3a', 3);
+  for (let k = 0; k < 4; k++) {
+    const dx = (r() < 0.5 ? -1 : 1) * ri(r, 8, 16), y = H - 52 - k * alt / 4;
+    O(g, x + dx - 9, y - 5, x + dx + 9, y + 5, ['#3f9a4a', '#2f7a3a', '#58b85f'][ri(r, 0, 2)]);
+  }
+  O(g, x - 6, H - 52 - alt - 6, x + 6, H - 52 - alt + 6, ['#e0b341', '#d9534f', '#b565d9', '#4fd9c9'][ri(r, 0, 3)], '#fff');
+}
+function cena4(g) {
+  const r = rng(4);
+  R(g, 0, 0, W, H, '#10261d');
+  for (let x = 0; x <= W; x += 70) L(g, x, 0, x, H, '#2f6b5a');
+  for (let y = 0; y < H; y += 50) L(g, 0, y, W, y, '#2f6b5a');
+  R(g, 0, 0, W, H, null, '#1b4a3b', 4); piso(g, '#1a1812');
+  VASOS_X.forEach(x => planta(g, x, r));
+  L(g, 390, 170, 380, H - 25, '#2a2a30', 5); L(g, 470, 170, 480, H - 25, '#2a2a30', 5);
+  O(g, 360, 110, 500, 185, '#1a1a1f', '#0a0a0d', 2); O(g, 366, 104, 494, 134, '#2b2b33', '#0a0a0d', 2);
+  suportes(g);
+}
+function anim4(g, t) {
+  O(g, 374, 112, 486, 130, '#6fd36f');
+  for (let k = 0; k < 6; k++) {
+    const fase = (t * 16 + k * 9) % 54, x = 395 + k * 14 + 5 * Math.sin(t * 2 + k), r = 2 + fase / 14;
+    if (fase < 50) O(g, x - r, 118 - fase - r, x + r, 118 - fase + r, null, '#9cf59c');
+  }
+}
+/* --- sala 5 --- */
+const CX = 430, CY = 148, RX = 175, RY = 48;
+function estatua(g, x, y, cor) {
+  P(g, [x - 13, y, x + 13, y, x + 9, y - 36, x - 9, y - 36], cor, '#201a28'); O(g, x - 8, y - 52, x + 8, y - 36, cor, '#201a28');
+}
+function cena5(g) {
+  const r = rng(5);
+  R(g, 0, 0, W, H, '#17121f');
+  for (let i = 0; i < 70; i++) R(g, ...(() => { const x = ri(r, 0, W), y = ri(r, 0, 90); return [x, y, x + 2, y + 2]; })(), ['#fff', '#cdb6ff', '#ffe9a8'][ri(r, 0, 2)]);
+  O(g, 110, 85, 750, 215, '#241a30', '#3b2c4d', 2);
+  O(g, CX - 150, CY - 32, CX + 150, CY + 32, '#4a4358', OURO, 2); O(g, CX - 120, CY - 22, CX + 120, CY + 22, null, '#6a6078');
+  const ang = i => (30 + 60 * i) * Math.PI / 180;
+  [0, 1, 2, 3, 4, 5].sort((a, b) => Math.sin(ang(a)) - Math.sin(ang(b))).forEach(i =>
+    estatua(g, CX + RX * Math.cos(ang(i)), CY + RY * Math.sin(ang(i)), i < 2 ? OURO : '#8d8a99'));
+  L(g, CX + RX * Math.cos(ang(0)) - 10, CY + RY * Math.sin(ang(0)) - 22, CX + RX * Math.cos(ang(1)) + 10, CY + RY * Math.sin(ang(1)) - 22, '#fff3b0', 2);
+  suportes(g);
+}
+function anim5(g, t) {
+  const p = 0.5 + 0.5 * Math.sin(t * 2.5), cor = `rgb(${106 + 106 * p | 0},${74 + 92 * p | 0},${168 - 94 * p | 0})`;
+  g.setLineDash([4, 8]); g.lineDashOffset = -(t * 20) % 12; O(g, CX - 215, CY - 62, CX + 215, CY + 62, null, cor, 2);
+  g.setLineDash([2, 6]); g.lineDashOffset = (t * 15) % 8; O(g, CX - 190, CY - 50, CX + 190, CY + 50, null, cor, 1);
+  g.setLineDash([]);
+}
+const CENAS = { 1: [cena1, null], 2: [cena2, anim2], 3: [cena3, anim3], 4: [cena4, anim4], 5: [cena5, anim5] };
+const cache = {};
+function fundo(n) {
+  if (!cache[n]) { const c = document.createElement('canvas'); c.width = W; c.height = H; CENAS[n][0](c.getContext('2d')); cache[n] = c; }
+  return cache[n];
+}
+function desenharCena(g, n, t, frac, aberta) {
+  g.drawImage(fundo(n), 0, 0);
+  const r = rng(Math.floor(t * 12));
+  if (CENAS[n][1]) CENAS[n][1](g, t);
+  chamas(g, t, r);
+  if (aberta) {
+    const rr = 90 + 8 * Math.sin(t * 3); g.globalAlpha = 0.3; O(g, W / 2 - rr * 2, H - rr, W / 2 + rr * 2, H + rr, '#ffe9a8'); g.globalAlpha = 1;
+  } else nevoa(g, t, frac);
+}
+
+/* ===================== JOGO ===================== */
+const $ = id => document.getElementById(id);
+const g = $('cena').getContext('2d');
+let idx = 0, fim = 0, erros = 0, dicaUsada = false, ativa = false, aberta = false, cenaNivel = 1, fracAtual = 0.15;
+const agora = () => performance.now() / 1000;
+
+$('regras').textContent = `Cada sala tem ${TEMPO}s de ar  •  Erro: -${PEN_ERRO}s  •  Dica: -${PEN_DICA}s`;
+function mostrar(tela) { ['menu', 'sala', 'fim'].forEach(t => $('tela-' + t).hidden = t !== tela); }
+function msg(txt, cor) { $('msg').textContent = txt; $('msg').style.color = cor; }
+
+function iniciarSala() {
+  const n = NIVEIS[idx];
+  erros = 0; dicaUsada = false; ativa = true; aberta = false; cenaNivel = n.nivel; fracAtual = 0;
+  fim = agora() + TEMPO;
+  mostrar('sala'); tocar(n.nivel);
+  $('sala-num').textContent = `SALA ${n.nivel} DE ${NIVEIS.length}  •  ${n.tema}`;
+  $('sala-titulo').textContent = n.titulo;
+  $('sala-narrativa').textContent = n.narrativa;
+  $('sala-pergunta').textContent = n.pergunta;
+  $('btn-dica').textContent = `Dica (-${PEN_DICA}s)`;
+  ['resposta', 'btn-responder', 'btn-dica'].forEach(i => $(i).disabled = false);
+  $('resposta').value = ''; msg('', '');
+  $('area-final').hidden = true;
+  if (matchMedia('(pointer:fine)').matches) $('resposta').focus();
+}
+function gabarito(n, sucesso) {
+  ['resposta', 'btn-responder', 'btn-dica'].forEach(i => $(i).disabled = true);
+  $('gabarito').textContent = `GABARITO - resposta: ${n.resposta_correta}\nFórmula: ${n.formula}\n\n${n.gabarito}`;
+  const b = $('btn-proxima');
+  if (sucesso) { b.textContent = idx === NIVEIS.length - 1 ? 'Ver desfecho' : 'Próxima sala'; b.className = 'btn verde'; b.onclick = avancar; }
+  else { b.textContent = 'Tentar a sala novamente'; b.className = 'btn verm'; b.onclick = iniciarSala; }
+  $('area-final').hidden = false;
+}
+function avancar() {
+  idx++;
+  if (idx >= NIVEIS.length) { mostrar('fim'); tocar('fim'); cenaNivel = 5; aberta = true; } else iniciarSala();
+}
+function responder() {
+  if (!ativa) return;
+  const n = NIVEIS[idx], txt = $('resposta').value.trim().replace(/[. ]/g, '');
+  if (!/^-?\d+$/.test(txt)) { msg('Digite apenas um número inteiro.', 'var(--cinza)'); return; }
+  if (parseInt(txt, 10) === n.resposta_correta) {
+    ativa = false; aberta = true; sfxSucesso(); msg(n.mensagem_sucesso, 'var(--verde)'); gabarito(n, true);
+  } else {
+    erros++; fim -= PEN_ERRO; sfxErro();
+    msg(`${n.mensagem_erro}\n(Erros: ${erros}  •  -${PEN_ERRO}s de ar)`, 'var(--vermelho)');
+    $('resposta').value = '';
+  }
+}
+function dica() {
+  if (!ativa) return;
+  if (!dicaUsada) { fim -= PEN_DICA; dicaUsada = true; $('btn-dica').textContent = 'Dica usada'; }
+  msg('DICA: ' + NIVEIS[idx].dica, 'var(--amarelo)');
+}
+function quadro() {
+  const t = agora();
+  if (ativa) {
+    const resto = fim - t;
+    fracAtual = Math.max(0, Math.min(1, 1 - resto / TEMPO));
+    $('gas-barra').style.width = fracAtual * 100 + '%';
+    $('gas-barra').style.background = fracAtual < .5 ? 'var(--verde)' : fracAtual < .8 ? 'var(--amarelo)' : 'var(--vermelho)';
+    $('gas-txt').textContent = `Gás alquímico: ${Math.floor(fracAtual * 100)}%   |   ar restante: ${Math.max(0, Math.floor(resto))}s`;
+    if (resto <= 0) {
+      ativa = false; fracAtual = 1;
+      msg('O gás toma o ambiente e tudo escurece... Estude o gabarito e tente de novo.', 'var(--vermelho)');
+      gabarito(NIVEIS[idx], false);
+    }
+  }
+  desenharCena(g, cenaNivel, t, fracAtual, aberta);
+  requestAnimationFrame(quadro);
+}
+
+$('btn-iniciar').onclick = () => { iniciarAudio(); idx = 0; iniciarSala(); };
+$('btn-reiniciar').onclick = () => { idx = 0; aberta = false; cenaNivel = 1; fracAtual = .15; mostrar('menu'); tocar('menu'); };
+$('btn-responder').onclick = responder;
+$('btn-dica').onclick = dica;
+$('btn-musica').onclick = alternarMusica;
+$('resposta').addEventListener('keydown', e => { if (e.key === 'Enter') responder(); });
+document.addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && e.target.tagName !== 'INPUT') alternarMusica(); });
+// navegadores só liberam áudio após um gesto do usuário
+document.addEventListener('pointerdown', () => { iniciarAudio(); if (!faixa && !mudo) tocar(atual || 'menu'); }, { once: true });
+atual = 'menu';
+quadro();
+</script>
+</body>
+</html>
