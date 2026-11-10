@@ -122,14 +122,16 @@ def permutacao(pergunta, contagens):
 
 
 def anagrama(palavra, abertura="Quantos anagramas distintos tem a palavra"):
-    return permutacao(f"{abertura} {palavra}?\n(Anagrama é qualquer ordenação das letras, "
-                      "com ou sem sentido.)", list(Counter(palavra).values()))
+    q = permutacao(f"{abertura} {palavra}?\n(Anagrama é qualquer ordenação das letras, "
+                   "com ou sem sentido.)", list(Counter(palavra).values()))
+    q["palavra"] = palavra  # o cenário mostra estas letras nas pedras
+    return q
 
 
 QUESTOES_2 = [
-    permutacao("Para destrancar a porta, é preciso testar todas as ordens possíveis das seis pedras "
-               "A, R, C, A, N, A (a palavra ARCANA e seus anagramas).\nQuantos anagramas distintos existem?",
-               [3, 1, 1, 1]),
+    {**permutacao("Para destrancar a porta, é preciso testar todas as ordens possíveis das seis pedras "
+                  "A, R, C, A, N, A (a palavra ARCANA e seus anagramas).\nQuantos anagramas distintos existem?",
+                  [3, 1, 1, 1]), "palavra": "ARCANA"},
     anagrama("MAGIA"),
     anagrama("RUNAS", "O feitiço só funciona se as letras forem pronunciadas na ordem certa. Quantas ordens "
                       "diferentes existem para as letras da palavra"),

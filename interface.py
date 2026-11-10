@@ -123,6 +123,7 @@ class Jogo(tk.Tk):
         self.limpar()
         nivel = NIVEIS[self.indice]
         self.q = random.choice([q for q in nivel["questoes"] if q is not self.q])
+        cenarios.definir_palavra(self.q.get("palavra"))
         self.erros = 0
         self.dica_usada = False
         self.fim = time.time() + TEMPO_POR_SALA

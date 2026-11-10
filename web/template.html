@@ -264,7 +264,6 @@ function cena1(g) {
   suportes(g);
 }
 /* --- sala 2 --- */
-const LETRAS = 'ARCANA', STONE_X = [335, 375, 415, 455, 495, 535];
 function estante(g, x0, x1, r) {
   const cores = ['#7a2e2e', '#2e4a7a', '#3f6b3a', '#6b4a8a', '#8a6a2e', '#2e6b6b', '#5a3a22'];
   [70, 115, 160].forEach(y => {
@@ -282,18 +281,28 @@ function cena2(g) {
   tijolos(g, '#3a3340', '#201b25', 2); piso(g, '#15111a');
   estante(g, 100, 300, r); estante(g, 560, 760, r);
   R(g, 390, 150, 470, H - 25, '#5d5566', '#2d2833'); R(g, 380, 140, 480, 152, '#7a7184', '#2d2833');
-  STONE_X.forEach((x, i) => {
-    R(g, x - 14, 98, x + 14, 134, '#3b3548', '#9d92b5', 2);
-    T(g, x, 116, LETRAS[i], '#f1e6c8', 'bold 20px Georgia');
-  });
   for (let k = 0; k < 6; k++) { L(g, 0, 0, 70 - k * 8, k * 12, '#6e6678'); L(g, W, 0, W - 70 + k * 8, k * 12, '#6e6678'); }
   suportes(g);
 }
+function glifo(g, k, x, y) {
+  g.strokeStyle = '#f1e6c8'; g.lineWidth = 2; k %= 6;
+  const l = (a, b, c, d) => L(g, x + a, y + b, x + c, y + d, '#f1e6c8', 2);
+  if (k === 0) P(g, [x, y - 9, x + 9, y + 8, x - 9, y + 8], null, '#f1e6c8', 2);
+  else if (k === 1) { O(g, x - 8, y - 8, x + 8, y + 8, null, '#f1e6c8', 2); O(g, x - 2, y - 2, x + 2, y + 2, '#f1e6c8'); }
+  else if (k === 2) P(g, [x, y - 10, x + 8, y, x, y + 10, x - 8, y], null, '#f1e6c8', 2);
+  else if (k === 3) { l(-8, 0, 8, 0); l(0, -9, 0, 9); }
+  else if (k === 4) { l(-7, -9, -7, 9); l(-7, -9, 7, 1); l(7, 1, -7, 9); }
+  else { l(-8, -8, 8, 8); l(8, -8, -8, 8); l(0, -10, 0, 10); }
+}
+let palavraCena = null;  // letras do enigma atual (null = símbolos de runas)
 function anim2(g, t) {
-  STONE_X.forEach((x, i) => {
-    const p = 0.5 + 0.5 * Math.sin(t * 3 + i);
+  const n = palavraCena ? palavraCena.length : 6, esp = n <= 6 ? 40 : 34;
+  for (let i = 0; i < n; i++) {
+    const x = 430 + (i - (n - 1) / 2) * esp, p = 0.5 + 0.5 * Math.sin(t * 3 + i);
+    R(g, x - 14, 98, x + 14, 134, '#3b3548', '#9d92b5', 2);
+    if (palavraCena) T(g, x, 116, palavraCena[i], '#f1e6c8', 'bold 20px Georgia'); else glifo(g, i, x, 116);
     R(g, x - 17, 95, x + 17, 137, null, `rgb(${120 + 100 * p | 0},${90 + 70 * p | 0},${170 + 60 * p | 0})`, 2);
-  });
+  }
 }
 /* --- sala 3 --- */
 const FRASCOS = ['#d9534f', '#e0b341', '#4f9de0', '#6fbf73', '#b565d9', '#e07f4f', '#4fd9c9'];
@@ -419,6 +428,7 @@ let q = null;
 function iniciarSala() {
   const n = NIVEIS[idx];
   q = sortear(idx);
+  palavraCena = q.palavra || null;
   erros = 0; dicaUsada = false; ativa = true; aberta = false; cenaNivel = n.nivel; fracAtual = 0;
   fim = agora() + TEMPO;
   mostrar('sala'); tocar(n.nivel);

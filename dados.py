@@ -29,7 +29,7 @@ NIVEIS = [
         "titulo": "A Biblioteca das Sombras",
         "tema": "Permutação Simples e com Repetição (anagramas)",
         "narrativa": (
-            "Estantes altas se perdem na escuridão. No centro, um pedestal exibe pedras com letras gravadas. "
+            "Estantes altas se perdem na escuridão. No centro, um pedestal exibe pedras com símbolos gravados. "
             "O alquimista deixou um recado: 'A ordem certa abre o caminho, mas há muitas formas de embaralhar'."
         ),
         "mensagem_sucesso": (

@@ -105,8 +105,40 @@ def _estante(c, x0, x1, rnd):
     c.create_rectangle(x1 + 4, 25, x1 + 8, 175, fill="#4a3220", width=0, tags=TAG_E)
 
 
-LETRAS = "ARCANA"
-STONE_X = [x for x in range(335, 536, 40)]
+PALAVRA = None  # letras do enigma atual (None = pedras com símbolos de runas)
+
+
+def definir_palavra(palavra):
+    """Faz as pedras da biblioteca mostrarem a palavra do enigma sorteado."""
+    global PALAVRA
+    PALAVRA = palavra
+
+
+def _pedras(n):
+    esp = 40 if n <= 6 else 34
+    return [430 + (i - (n - 1) / 2) * esp for i in range(n)]
+
+
+def _glifo(c, k, x, y, cor):
+    k %= 6
+    if k == 0:
+        c.create_polygon(x, y - 9, x + 9, y + 8, x - 9, y + 8, fill="", outline=cor, width=2, tags=TAG_A)
+    elif k == 1:
+        c.create_oval(x - 8, y - 8, x + 8, y + 8, outline=cor, width=2, tags=TAG_A)
+        c.create_oval(x - 2, y - 2, x + 2, y + 2, fill=cor, width=0, tags=TAG_A)
+    elif k == 2:
+        c.create_polygon(x, y - 10, x + 8, y, x, y + 10, x - 8, y, fill="", outline=cor, width=2, tags=TAG_A)
+    elif k == 3:
+        c.create_line(x - 8, y, x + 8, y, fill=cor, width=2, tags=TAG_A)
+        c.create_line(x, y - 9, x, y + 9, fill=cor, width=2, tags=TAG_A)
+    elif k == 4:
+        c.create_line(x - 7, y - 9, x - 7, y + 9, fill=cor, width=2, tags=TAG_A)
+        c.create_line(x - 7, y - 9, x + 7, y + 1, fill=cor, width=2, tags=TAG_A)
+        c.create_line(x + 7, y + 1, x - 7, y + 9, fill=cor, width=2, tags=TAG_A)
+    else:
+        c.create_line(x - 8, y - 8, x + 8, y + 8, fill=cor, width=2, tags=TAG_A)
+        c.create_line(x + 8, y - 8, x - 8, y + 8, fill=cor, width=2, tags=TAG_A)
+        c.create_line(x, y - 10, x, y + 10, fill=cor, width=2, tags=TAG_A)
 
 
 def _cena2(c):
@@ -117,9 +149,6 @@ def _cena2(c):
     _estante(c, 560, 760, rnd)
     c.create_rectangle(390, 150, 470, H - 25, fill="#5d5566", outline="#2d2833", tags=TAG_E)
     c.create_rectangle(380, 140, 480, 152, fill="#7a7184", outline="#2d2833", tags=TAG_E)
-    for i, x in enumerate(STONE_X):
-        c.create_rectangle(x - 14, 98, x + 14, 134, fill="#3b3548", outline="#9d92b5", width=2, tags=TAG_E)
-        c.create_text(x, 116, text=LETRAS[i], fill="#f1e6c8", font=("Georgia", 15, "bold"), tags=TAG_E)
     for k in range(6):
         c.create_line(0, 0, 70 - k * 8, k * 12, fill="#6e6678", tags=TAG_E)
         c.create_line(W, 0, W - 70 + k * 8, k * 12, fill="#6e6678", tags=TAG_E)
@@ -127,9 +156,15 @@ def _cena2(c):
 
 
 def _anim2(c, t, rnd):
-    for i, x in enumerate(STONE_X):
+    xs = _pedras(len(PALAVRA) if PALAVRA else 6)
+    for i, x in enumerate(xs):
         p = 0.5 + 0.5 * math.sin(t * 3 + i)
         cor = "#%02x%02x%02x" % (int(120 + 100 * p), int(90 + 70 * p), int(170 + 60 * p))
+        c.create_rectangle(x - 14, 98, x + 14, 134, fill="#3b3548", outline="#9d92b5", width=2, tags=TAG_A)
+        if PALAVRA:
+            c.create_text(x, 116, text=PALAVRA[i], fill="#f1e6c8", font=("Georgia", 15, "bold"), tags=TAG_A)
+        else:
+            _glifo(c, i, x, 116, "#f1e6c8")
         c.create_rectangle(x - 17, 95, x + 17, 137, outline=cor, width=2, tags=TAG_A)
 
 
