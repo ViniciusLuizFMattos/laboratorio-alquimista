@@ -108,7 +108,7 @@ def permutacao(pergunta, contagens):
         gab = (f"São {n} itens no total, mas alguns se repetem ({', '.join(f'{c} iguais' for c in reps)}).\n"
                f"Se todos fossem diferentes teríamos {n}! = {factorial(n)} ordens.\n"
                f"Trocar os itens iguais entre si não gera ordem nova: dividimos por {fat} = {den}.\n"
-               f"  {n}! / ({fat.replace(' · ', ' · ')}) = {factorial(n)} / {den} = {resp}.")
+               f"  {n}! / {fat if len(reps) == 1 else '(' + fat + ')'} = {factorial(n)} / {den} = {resp}.")
         formula = "P(n; a, b, ...) = n! / (a! · b! · ...)"
         dica = ("Permutação com repetição: n! dividido pelo fatorial de cada quantidade repetida. "
                 "Quantos itens iguais existem de cada tipo?")
@@ -205,11 +205,11 @@ QUESTOES_3 = [
             "Quantas filas diferentes podem ser montadas?", 6, 4),
     arranjo("Existem 8 salas no laboratório e é preciso visitar 3 delas, em sequência, sem repetir sala.\n"
             "Quantos roteiros distintos existem?", 8, 3),
-    arranjo("Quantos números de 3 algarismos distintos podem ser formados com os algarismos 1, 2, 3, 4, 5 e 6?", 6, 3),
+    arranjo("Quantos números de 2 algarismos distintos podem ser formados com os algarismos 1, 2, 3, 4, 5, 6, 7 e 8?", 8, 2),
     arranjo("Um código de 3 letras distintas é formado com as letras A, B, C, D, E, F e G.\n"
             "Quantos códigos existem?", 7, 3),
-    arranjo("Entre 6 aprendizes, 4 vão se sentar em 4 bancos numerados.\n"
-            "De quantas maneiras isso pode ser feito?", 6, 4),
+    arranjo("Entre 7 aprendizes, 2 vão se sentar em 2 bancos numerados.\n"
+            "De quantas maneiras isso pode ser feito?", 7, 2),
     arranjo("Entre 10 candidatos, escolhem-se um mestre e um assistente (funções diferentes).\n"
             "De quantas formas?", 10, 2),
     arranjo("Seis poções diferentes: escolhem-se 4 para beber em sequência (a ordem importa).\n"
